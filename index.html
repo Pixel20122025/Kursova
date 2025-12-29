@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OptiSolve — Візуалізатор ЛП</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-gradient: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            --card-bg: rgba(255, 255, 255, 0.85);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent: #ec4899;
+            --glass-border: rgba(255, 255, 255, 0.6);
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .app-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .app-header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+            background: linear-gradient(90deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 25px;
+            width: 100%;
+            max-width: 1300px;
+        }
+
+        .glass-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.05);
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+            display: block;
+        }
+
+        .obj-function {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 25px;
+            background: #fff;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.03);
+        }
+
+        input[type="number"] {
+            width: 60px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 8px;
+            font-family: inherit;
+            font-weight: 600;
+            transition: border-color 0.2s;
+        }
+
+        input[type="number"]:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .constraint-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .btn {
+            cursor: pointer;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            padding: 12px 20px;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .btn-primary:hover { background: var(--primary-hover); transform: translateY(-2px); }
+
+        .btn-icon {
+            background: #fee2e2;
+            color: #ef4444;
+            width: 32px;
+            height: 32px;
+        }
+
+        .result-panel {
+            margin-top: 30px;
+            padding: 20px;
+            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
+            border-radius: 20px;
+            color: white;
+        }
+
+        .visualizer-container {
+            background: #fff;
+            border-radius: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+            height: 700px;
+        }
+
+        svg { width: 100%; height: 100%; }
+
+        .axis-label { font-size: 12px; fill: var(--text-muted); font-weight: 600; }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @media (max-width: 1000px) {
+            .main-grid { grid-template-columns: 1fr; }
+            .visualizer-container { height: 500px; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="app-header">
+    <h1>OptiSolve Pro</h1>
+    <p style="color: var(--text-muted)">Графічний метод розв'язання задач лінійного програмування</p>
+</header>
+
+<main class="container main-grid">
+    <div class="sidebar">
+        <div class="glass-card">
+            <span class="section-title">Цільова функція</span>
+            <div class="obj-function">
+                <span style="font-weight: bold; color: var(--primary)">Max Z = </span>
+                <input type="number" id="objA" value="3">
+                <span>x₁ +</span>
+                <input type="number" id="objB" value="5">
+                <span>x₂</span>
+            </div>
+
+            <span class="section-title">Обмеження (≤)</span>
+            <div id="consWrapper"></div>
+            
+            <button class="btn btn-primary" id="addBtn">+ Додати умову</button>
+            <button class="btn" id="clearBtn" style="background:none; color:var(--text-muted); width:100%; margin-top:10px">Очистити все</button>
+
+            <div class="result-panel" id="resPanel">
+                <div style="opacity: 0.9; font-size: 0.8rem; margin-bottom: 5px;">ОПТИМАЛЬНА ТОЧКА</div>
+                <div id="resCoords" style="font-size: 1.4rem; font-weight: 800;">(0.00, 0.00)</div>
+                <div id="resVal" style="margin-top: 10px; font-size: 1rem; border-top: 1px solid rgba(255,255,255,0.2); padding-top: 10px;">
+                    Z = 0.00
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="visualizer-container">
+        <svg id="canvas">
+            <defs>
+                <pattern id="gridPattern" width="40" height="40" patternUnits="userSpaceOnUse">
+                    <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#f1f5f9" stroke-width="1"/>
+                </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridPattern)" />
+            <g id="mainG" transform="translate(60, 640) scale(1, -1)">
+                <line x1="-60" y1="0" x2="1000" y2="0" stroke="#cbd5e1" stroke-width="2" />
+                <line x1="0" y1="-60" x2="0" y2="1000" stroke="#cbd5e1" stroke-width="2" />
+                
+                <g id="drawArea"></g>
+                <circle id="optDot" r="8" fill="#ec4899" stroke="white" stroke-width="3" style="display:none" />
+            </g>
+        </svg>
+    </div>
+</main>
+
+<script>
+    let data = {
+        constraints: [
+            { a: 1, b: 2, v: 10 },
+            { a: 2, b: 1, v: 8 }
+        ]
+    };
+
+    const wrapper = document.getElementById('consWrapper');
+    const drawArea = document.getElementById('drawArea');
+    const optDot = document.getElementById('optDot');
+
+    function renderInputs() {
+        wrapper.innerHTML = '';
+        data.constraints.forEach((c, i) => {
+            const div = document.createElement('div');
+            div.className = 'constraint-row';
+            div.innerHTML = `
+                <input type="number" value="${c.a}" oninput="update(${i}, 'a', this.value)">
+                <span style="color:var(--text-muted)">x₁ +</span>
+                <input type="number" value="${c.b}" oninput="update(${i}, 'b', this.value)">
+                <span style="color:var(--text-muted)">x₂ ≤</span>
+                <input type="number" value="${c.v}" oninput="update(${i}, 'v', this.value)">
+                <button class="btn btn-icon" onclick="remove(${i})">×</button>
+            `;
+            wrapper.appendChild(div);
+        });
+        solve();
+    }
+
+    function update(i, field, val) {
+        data.constraints[i][field] = parseFloat(val) || 0;
+        solve();
+    }
+
+    function remove(i) {
+        data.constraints.splice(i, 1);
+        renderInputs();
+    }
+
+    document.getElementById('addBtn').onclick = () => {
+        data.constraints.push({ a: 1, b: 1, v: 5 });
+        renderInputs();
+    };
+
+    document.getElementById('objA').oninput = solve;
+    document.getElementById('objB').oninput = solve;
+
+    function intersect(l1, l2) {
+        const det = l1.a * l2.b - l1.b * l2.a;
+        if (Math.abs(det) < 1e-6) return null;
+        return {
+            x: (l2.b * l1.v - l1.b * l2.v) / det,
+            y: (l1.a * l2.v - l2.a * l1.v) / det
+        };
+    }
+
+    function solve() {
+        const cA = parseFloat(document.getElementById('objA').value) || 0;
+        const cB = parseFloat(document.getElementById('objB').value) || 0;
+        
+        let lines = [...data.constraints, {a:1, b:0, v:0, min:true}, {a:0, b:1, v:0, min:true}];
+        let pts = [];
+
+        for(let i=0; i<lines.length; i++) {
+            for(let j=i+1; j<lines.length; j++) {
+                let p = intersect(lines[i], lines[j]);
+                if(p) {
+                    let ok = lines.every(l => l.min ? p.x*l.a + p.y*l.b >= l.v - 0.01 : p.x*l.a + p.y*l.b <= l.v + 0.01);
+                    if(ok) pts.push(p);
+                }
+            }
+        }
+
+        // Sort for polygon
+        if(pts.length > 0) {
+            const mx = pts.reduce((s,p)=>s+p.x,0)/pts.length;
+            const my = pts.reduce((s,p)=>s+p.y,0)/pts.length;
+            pts.sort((a,b) => Math.atan2(a.y-my, a.x-mx) - Math.atan2(b.y-my, b.x-mx));
+        }
+
+        let best = null, maxZ = -Infinity;
+        pts.forEach(p => {
+            let z = p.x*cA + p.y*cB;
+            if(z > maxZ) { maxZ = z; best = p; }
+        });
+
+        draw(pts, best, maxZ);
+    }
+
+    function draw(pts, best, maxZ) {
+        const scale = 40;
+        drawArea.innerHTML = '';
+        
+        // Render Feasible Region
+        if(pts.length > 2) {
+            const path = pts.map(p => `${p.x*scale},${p.y*scale}`).join(' ');
+            const poly = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+            poly.setAttribute("points", path);
+            poly.setAttribute("fill", "rgba(99, 102, 241, 0.2)");
+            poly.setAttribute("stroke", "#6366f1");
+            poly.setAttribute("stroke-width", "3");
+            drawArea.appendChild(poly);
+        }
+
+        // Constraints lines
+        data.constraints.forEach(c => {
+            if(c.a === 0 && c.b === 0) return;
+            let x1, y1, x2, y2;
+            if(c.b === 0) { x1=x2=c.v/c.a; y1=0; y2=20; }
+            else if(c.a === 0) { y1=y2=c.v/c.b; x1=0; x2=20; }
+            else { x1=0; y1=c.v/c.b; x2=c.v/c.a; y2=0; }
+
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x1*scale); line.setAttribute("y1", y1*scale);
+            line.setAttribute("x2", x2*scale); line.setAttribute("y2", y2*scale);
+            line.setAttribute("stroke", "#e2e8f0");
+            line.setAttribute("stroke-dasharray", "5,5");
+            drawArea.appendChild(line);
+        });
+
+        if(best) {
+            optDot.style.display = 'block';
+            optDot.setAttribute("cx", best.x*scale);
+            optDot.setAttribute("cy", best.y*scale);
+            document.getElementById('resCoords').innerText = `(${best.x.toFixed(2)}, ${best.y.toFixed(2)})`;
+            document.getElementById('resVal').innerText = `Z = ${maxZ.toFixed(2)}`;
+        }
+    }
+
+    renderInputs();
+</script>
+
+</body>
+</html>
